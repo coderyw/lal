@@ -9,9 +9,9 @@
 package hls
 
 import (
+	"github.com/q191201771/lal/pkg/filesystemlayer"
 	"sync"
-
-	"github.com/q191201771/naza/pkg/filesystemlayer"
+	//"github.com/q191201771/naza/pkg/filesystemlayer"
 )
 
 var (
@@ -19,16 +19,12 @@ var (
 	setOnce sync.Once
 )
 
-func SetUseMemoryAsDiskFlag(flag bool) {
+func SetUseMemoryAsDiskFlag(flag uint8, cacheDef filesystemlayer.HlsFileSystemNewer) {
 	setOnce.Do(func() {
 		var t filesystemlayer.FslType
-		if flag {
-			t = filesystemlayer.FslTypeMemory
-		} else {
-			t = filesystemlayer.FslTypeDisk
-		}
+		t = filesystemlayer.FslType(flag + 1)
 		if fslCtx == nil || fslCtx.Type() != t {
-			fslCtx = filesystemlayer.FslFactory(t)
+			fslCtx = filesystemlayer.FslFactory(t, cacheDef)
 		}
 	})
 }
@@ -42,5 +38,5 @@ func RemoveAll(path string) error {
 }
 
 func init() {
-	fslCtx = filesystemlayer.FslFactory(filesystemlayer.FslTypeDisk)
+	fslCtx = filesystemlayer.FslFactory(filesystemlayer.FslTypeDisk, nil)
 }

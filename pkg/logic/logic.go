@@ -9,6 +9,7 @@
 package logic
 
 import (
+	"github.com/q191201771/lal/pkg/filesystemlayer"
 	"path/filepath"
 
 	"github.com/q191201771/lal/pkg/base"
@@ -116,6 +117,9 @@ type Option struct {
 	// Authentication
 	// This interface make authenticate customizable so that we can implement any authenticate strategy like jwt...
 	Authentication IAuthentication
+
+	// 自定义hls缓存接口
+	NewHlsCache filesystemlayer.HlsFileSystemNewer
 }
 
 var defaultOption = Option{

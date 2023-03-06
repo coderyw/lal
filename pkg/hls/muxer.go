@@ -213,7 +213,7 @@ func (m *Muxer) updateFragment(ts uint64, boundary bool, frame *mpegts.Frame) er
 		maxfraglen := uint64(m.config.FragmentDurationMs * 90 * 10)
 		if (ts > m.fragTs && ts-m.fragTs > maxfraglen) || (m.fragTs > ts && m.fragTs-ts > negMaxfraglen) {
 			Log.Warnf("[%s] force fragment split. fragTs=%d, ts=%d, frame=%s", m.UniqueKey, m.fragTs, ts, frame.DebugString())
-
+			Log.Infof("开启分片位置")
 			if err := m.closeFragment(false); err != nil {
 				return err
 			}
@@ -236,7 +236,7 @@ func (m *Muxer) updateFragment(ts uint64, boundary bool, frame *mpegts.Frame) er
 			}
 		}
 		discont = false
-
+		//Log.Infof("切片长度:%v,%v", f.duration, m.config.FragmentDurationMs)
 		// 已经有TS切片，切片时长没有达到设置的阈值，则不开启新的切片
 		if f.duration < float64(m.config.FragmentDurationMs)/1000 {
 			return nil
@@ -248,6 +248,7 @@ func (m *Muxer) updateFragment(ts uint64, boundary bool, frame *mpegts.Frame) er
 	// 1. 当前是第一个分片
 	// 2. 当前不是第一个分片，但是上一个分片已经达到配置时长
 	if boundary {
+		Log.Infof("开启分片位置")
 		if err := m.closeFragment(false); err != nil {
 			return err
 		}

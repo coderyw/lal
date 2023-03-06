@@ -96,9 +96,9 @@ Doc: %s
 	sm.config = LoadConfAndInitLog(rawContent)
 	base.LogoutStartInfo()
 
-	if sm.config.HlsConfig.Enable && sm.config.HlsConfig.UseMemoryAsDiskFlag {
+	if sm.config.HlsConfig.Enable {
 		Log.Infof("hls use memory as disk.")
-		hls.SetUseMemoryAsDiskFlag(true)
+		hls.SetUseMemoryAsDiskFlag(sm.config.HlsConfig.CacheFlag, sm.option.NewHlsCache)
 	}
 
 	if sm.config.RecordConfig.EnableFlv {

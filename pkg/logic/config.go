@@ -92,6 +92,7 @@ type HlsConfig struct {
 	hls.MuxerConfig
 	SubSessionTimeoutMs int    `json:"sub_session_timeout_ms"`
 	SubSessionHashKey   string `json:"sub_session_hash_key"`
+	CacheFlag           uint8  `json:"cache_flag"` //缓存类型 0 file,1 memory 2自定义接口
 }
 
 type RtspConfig struct {
