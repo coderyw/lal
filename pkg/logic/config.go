@@ -179,6 +179,7 @@ type CommonHttpAddrConfig struct {
 	HttpsListenAddr string `json:"https_listen_addr"`
 	HttpsCertFile   string `json:"https_cert_file"`
 	HttpsKeyFile    string `json:"https_key_file"`
+	HttpGZip        bool   `json:"http_g_zip"` //是否开启gzip压缩
 }
 
 func LoadConfAndInitLog(rawContent []byte) *Config {

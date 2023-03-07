@@ -41,6 +41,18 @@ func (sm *ServerManager) StatAllGroup() (sgs []base.StatGroup) {
 	return
 }
 
+// AddGroupRelayPush 给group添加推流
+func (sm *ServerManager) AddGroupRelayPush(addr string, streamName string) {
+	sm.mutex.Lock()
+	defer sm.mutex.Unlock()
+	sm.groupManager.Iterate(func(group *Group) bool {
+		if streamName == "" || group.streamName == streamName {
+			group.addUrl2PushProxy(addr)
+		}
+		return true
+	})
+}
+
 func (sm *ServerManager) StatGroup(streamName string) *base.StatGroup {
 	sm.mutex.Lock()
 	defer sm.mutex.Unlock()

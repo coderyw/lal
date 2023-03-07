@@ -10,6 +10,7 @@ package logic
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/q191201771/lal/pkg/rtmp"
 )
@@ -21,7 +22,13 @@ func (group *Group) AddRtmpPushSession(url string, session *rtmp.PushSession) {
 	group.mutex.Lock()
 	defer group.mutex.Unlock()
 	if group.url2PushProxy != nil {
-		group.url2PushProxy[url].pushSession = session
+		val, ok := group.url2PushProxy.Load(url)
+		if ok {
+			v := val.(*pushProxy)
+			v.pushSession = session
+			group.url2PushProxy.Store(url, v)
+		}
+		//group.url2PushProxy[url].pushSession = session
 	}
 }
 
@@ -30,8 +37,18 @@ func (group *Group) DelRtmpPushSession(url string, session *rtmp.PushSession) {
 	group.mutex.Lock()
 	defer group.mutex.Unlock()
 	if group.url2PushProxy != nil {
-		group.url2PushProxy[url].pushSession = nil
-		group.url2PushProxy[url].isPushing = false
+		group.url2PushProxy.Delete(url)
+		return
+		val, ok := group.url2PushProxy.Load(url)
+		if ok {
+			v := val.(*pushProxy)
+			v.pushSession = nil
+			v.isPushing = false
+			group.url2PushProxy.Store(url, v)
+		}
+		//
+		//group.url2PushProxy[url].pushSession = nil
+		//group.url2PushProxy[url].isPushing = false
 	}
 }
 
@@ -48,19 +65,35 @@ func (group *Group) initRelayPushByConfig() {
 	appName := group.appName
 	streamName := group.streamName
 
-	url2PushProxy := make(map[string]*pushProxy)
+	//url2PushProxy := make(map[string]*pushProxy)
+	url2PushProxy := new(sync.Map)
 	if enable {
 		for _, addr := range addrList {
 			pushUrl := fmt.Sprintf("rtmp://%s/%s/%s", addr, appName, streamName)
-			url2PushProxy[pushUrl] = &pushProxy{
+			url2PushProxy.Store(pushUrl, &pushProxy{
 				isPushing:   false,
 				pushSession: nil,
-			}
+			})
+			//url2PushProxy[pushUrl] = &pushProxy{
+			//	isPushing:   false,
+			//	pushSession: nil,
+			//}
 		}
 	}
 
 	group.pushEnable = group.config.RelayPushConfig.Enable
 	group.url2PushProxy = url2PushProxy
+}
+
+// addUrl2PushProxy 添加转推地址
+func (group *Group) addUrl2PushProxy(addr string) {
+	pushUrl := fmt.Sprintf("rtmp://%s/%s/%s", addr, group.appName, group.streamName)
+	if _, ok := group.url2PushProxy.Load(pushUrl); !ok {
+		group.url2PushProxy.Store(pushUrl, &pushProxy{
+			isPushing:   false,
+			pushSession: nil,
+		})
+	}
 }
 
 // startPushIfNeeded 必要时进行replay push转推
@@ -81,11 +114,12 @@ func (group *Group) startPushIfNeeded() {
 	if group.rtmpPubSession != nil {
 		urlParam = group.rtmpPubSession.RawQuery()
 	}
-
-	for url, v := range group.url2PushProxy {
+	group.url2PushProxy.Range(func(key, value any) bool {
+		url := key.(string)
+		v := value.(*pushProxy)
 		// 正在转推中
 		if v.isPushing {
-			continue
+			return true
 		}
 		v.isPushing = true
 
@@ -111,17 +145,56 @@ func (group *Group) startPushIfNeeded() {
 			Log.Infof("[%s] relay push done. err=%v", pushSession.UniqueKey(), err)
 			group.DelRtmpPushSession(u, pushSession)
 		}(url, urlWithParam)
-	}
+		return true
+	})
+	//for url, v := range group.url2PushProxy {
+	//	// 正在转推中
+	//	if v.isPushing {
+	//		continue
+	//	}
+	//	v.isPushing = true
+	//
+	//	urlWithParam := url
+	//	if urlParam != "" {
+	//		urlWithParam += "?" + urlParam
+	//	}
+	//	Log.Infof("[%s] start relay push. url=%s", group.UniqueKey, urlWithParam)
+	//
+	//	go func(u, u2 string) {
+	//		pushSession := rtmp.NewPushSession(func(option *rtmp.PushSessionOption) {
+	//			option.PushTimeoutMs = relayPushTimeoutMs
+	//			option.WriteAvTimeoutMs = relayPushWriteAvTimeoutMs
+	//		})
+	//		err := pushSession.Push(u2)
+	//		if err != nil {
+	//			Log.Errorf("[%s] relay push done. err=%v", pushSession.UniqueKey(), err)
+	//			group.DelRtmpPushSession(u, pushSession)
+	//			return
+	//		}
+	//		group.AddRtmpPushSession(u, pushSession)
+	//		err = <-pushSession.WaitChan()
+	//		Log.Infof("[%s] relay push done. err=%v", pushSession.UniqueKey(), err)
+	//		group.DelRtmpPushSession(u, pushSession)
+	//	}(url, urlWithParam)
+	//}
 }
 
 func (group *Group) stopPushIfNeeded() {
 	if !group.pushEnable {
 		return
 	}
-	for _, v := range group.url2PushProxy {
+	group.url2PushProxy.Range(func(key, value any) bool {
+		v := value.(*pushProxy)
 		if v.pushSession != nil {
 			v.pushSession.Dispose()
 		}
 		v.pushSession = nil
-	}
+		return true
+	})
+	//for _, v := range group.url2PushProxy {
+	//	if v.pushSession != nil {
+	//		v.pushSession.Dispose()
+	//	}
+	//	v.pushSession = nil
+	//}
 }

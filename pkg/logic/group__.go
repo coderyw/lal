@@ -115,8 +115,9 @@ type Group struct {
 	waitRtspSubSessionSet map[*rtsp.SubSession]struct{}
 	hlsSubSessionSet      map[*hls.SubSession]struct{}
 	// push
-	pushEnable    bool
-	url2PushProxy map[string]*pushProxy
+	pushEnable bool
+	//url2PushProxy map[string]*pushProxy
+	url2PushProxy *sync.Map
 	// hls
 	hlsMuxer *hls.Muxer
 	// record
@@ -409,12 +410,20 @@ func (group *Group) OutSessionNum() int {
 	defer group.mutex.Unlock()
 
 	pushNum := 0
-	for _, item := range group.url2PushProxy {
+	group.url2PushProxy.Range(func(key, value any) bool {
+		item := value.(*pushProxy)
 		// TODO(chef): [refactor] 考虑只判断session是否为nil 202205
 		if item.isPushing && item.pushSession != nil {
 			pushNum++
 		}
-	}
+		return true
+	})
+	//for _, item := range group.url2PushProxy {
+	//	// TODO(chef): [refactor] 考虑只判断session是否为nil 202205
+	//	if item.isPushing && item.pushSession != nil {
+	//		pushNum++
+	//	}
+	//}
 	return len(group.rtmpSubSessionSet) + len(group.rtspSubSessionSet) + len(group.waitRtspSubSessionSet) +
 		len(group.httpflvSubSessionSet) + len(group.httptsSubSessionSet) + pushNum
 }
@@ -494,7 +503,8 @@ func (group *Group) disposeInactiveSessions(tickCount uint32) {
 			session.Dispose()
 		}
 	}
-	for _, item := range group.url2PushProxy {
+	group.url2PushProxy.Range(func(key, value any) bool {
+		item := value.(*pushProxy)
 		session := item.pushSession
 		if item.isPushing && session != nil {
 			if _, writeAlive := session.IsAlive(); !writeAlive {
@@ -502,7 +512,17 @@ func (group *Group) disposeInactiveSessions(tickCount uint32) {
 				session.Dispose()
 			}
 		}
-	}
+		return true
+	})
+	//for _, item := range group.url2PushProxy {
+	//	session := item.pushSession
+	//	if item.isPushing && session != nil {
+	//		if _, writeAlive := session.IsAlive(); !writeAlive {
+	//			Log.Warnf("[%s] session timeout. session=%s", group.UniqueKey, session.UniqueKey())
+	//			session.Dispose()
+	//		}
+	//	}
+	//}
 }
 
 // updateAllSessionStat 更新所有session的状态
@@ -534,12 +554,20 @@ func (group *Group) updateAllSessionStat() {
 	for session := range group.waitRtspSubSessionSet {
 		session.UpdateStat(calcSessionStatIntervalSec)
 	}
-	for _, item := range group.url2PushProxy {
+	group.url2PushProxy.Range(func(key, value any) bool {
+		item := value.(*pushProxy)
 		session := item.pushSession
 		if item.isPushing && session != nil {
 			session.UpdateStat(calcSessionStatIntervalSec)
 		}
-	}
+		return true
+	})
+	//for _, item := range group.url2PushProxy {
+	//	session := item.pushSession
+	//	if item.isPushing && session != nil {
+	//		session.UpdateStat(calcSessionStatIntervalSec)
+	//	}
+	//}
 }
 
 func (group *Group) hasPubSession() bool {
@@ -557,12 +585,21 @@ func (group *Group) hasSubSession() bool {
 }
 
 func (group *Group) hasPushSession() bool {
-	for _, item := range group.url2PushProxy {
+	bo := false
+	group.url2PushProxy.Range(func(key, value any) bool {
+		item := value.(*pushProxy)
 		if item.isPushing && item.pushSession != nil {
-			return true
+			bo = true
+			return false
 		}
-	}
-	return false
+		return true
+	})
+	//for _, item := range group.url2PushProxy {
+	//	if item.isPushing && item.pushSession != nil {
+	//		return true
+	//	}
+	//}
+	return bo
 }
 
 func (group *Group) hasInSession() bool {

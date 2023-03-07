@@ -42,6 +42,7 @@ type ILalServer interface {
 	//
 	StatLalInfo() base.LalInfo
 	StatAllGroup() (sgs []base.StatGroup)
+	AddGroupRelayPush(addr string, streamName string)
 	StatGroup(streamName string) *base.StatGroup
 	CtrlStartRelayPull(info base.ApiCtrlStartRelayPullReq) base.ApiCtrlStartRelayPullResp
 	CtrlStopRelayPull(streamName string) base.ApiCtrlStopRelayPullResp

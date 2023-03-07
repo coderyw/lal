@@ -301,9 +301,10 @@ func (group *Group) broadcastByRtmpMsg(msg base.RtmpMsg) {
 
 	// TODO chef: rtmp sub, rtmp push, httpflv sub 的发送逻辑都差不多，可以考虑封装一下
 	if group.pushEnable {
-		for _, v := range group.url2PushProxy {
+		group.url2PushProxy.Range(func(key, value any) bool {
+			v := value.(*pushProxy)
 			if v.pushSession == nil {
-				continue
+				return true
 			}
 
 			if v.pushSession.IsFresh {
@@ -326,7 +327,34 @@ func (group *Group) broadcastByRtmpMsg(msg base.RtmpMsg) {
 			}
 
 			_ = v.pushSession.Write(lazyRtmpChunkDivider.GetEnsureWithSdf())
-		}
+			return true
+		})
+		//for _, v := range group.url2PushProxy {
+		//	if v.pushSession == nil {
+		//		continue
+		//	}
+		//
+		//	if v.pushSession.IsFresh {
+		//		if group.rtmpGopCache.MetadataEnsureWithSetDataFrame != nil {
+		//			_ = v.pushSession.Write(group.rtmpGopCache.MetadataEnsureWithSetDataFrame)
+		//		}
+		//		if group.rtmpGopCache.VideoSeqHeader != nil {
+		//			_ = v.pushSession.Write(group.rtmpGopCache.VideoSeqHeader)
+		//		}
+		//		if group.rtmpGopCache.AacSeqHeader != nil {
+		//			_ = v.pushSession.Write(group.rtmpGopCache.AacSeqHeader)
+		//		}
+		//		for i := 0; i < group.rtmpGopCache.GetGopCount(); i++ {
+		//			for _, item := range group.rtmpGopCache.GetGopDataAt(i) {
+		//				_ = v.pushSession.Write(item)
+		//			}
+		//		}
+		//
+		//		v.pushSession.IsFresh = false
+		//	}
+		//
+		//	_ = v.pushSession.Write(lazyRtmpChunkDivider.GetEnsureWithSdf())
+		//}
 	}
 
 	// # 广播。遍历所有 httpflv sub session，转发数据

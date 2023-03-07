@@ -12,6 +12,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/q191201771/lal/pkg/util"
 	"net/http"
 	"net/url"
 	"strings"
@@ -34,9 +35,10 @@ type ServerHandler struct {
 	mutex             sync.Mutex
 	subSessionTimeout time.Duration
 	subSessionHashKey string
+	gzip              bool
 }
 
-func NewServerHandler(outPath, urlPattern, subSessionHashKey string, subSessionTimeoutMs int, observer IHlsServerHandlerObserver) *ServerHandler {
+func NewServerHandler(outPath, urlPattern, subSessionHashKey string, subSessionTimeoutMs int, gzip bool, observer IHlsServerHandlerObserver) *ServerHandler {
 	if strings.HasPrefix(urlPattern, "/") {
 		urlPattern = urlPattern[1:]
 	}
@@ -47,6 +49,7 @@ func NewServerHandler(outPath, urlPattern, subSessionHashKey string, subSessionT
 		sessionMap:        make(map[string]*SubSession),
 		subSessionTimeout: time.Duration(subSessionTimeoutMs) * time.Millisecond,
 		subSessionHashKey: subSessionHashKey,
+		gzip:              gzip,
 	}
 	go sh.runLoop()
 	return sh
@@ -154,7 +157,16 @@ func (s *ServerHandler) ServeHTTPWithUrlCtx(resp http.ResponseWriter, req *http.
 			session.AddWroteBytesSum(uint64(len(content)))
 		}
 	}
-
+	//判断是否需要压缩
+	if s.gzip && strings.Contains(req.Header.Get("Accept-Encoding"), "gzip") {
+		resp.Header().Add("Content-Encoding", "gzip")
+		content, err = util.EncodeBytes2BytesByGzip(content)
+		if err != nil {
+			Log.Errorf(err.Error())
+			resp.WriteHeader(http.StatusNotFound)
+			return
+		}
+	}
 	_, _ = resp.Write(content)
 	return
 }
