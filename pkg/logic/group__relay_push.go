@@ -98,6 +98,7 @@ func (group *Group) addUrl2PushProxy(addr string) {
 
 // startPushIfNeeded 必要时进行replay push转推
 func (group *Group) startPushIfNeeded() {
+	Log.Infof("开始推送如果可以")
 	// push转推功能没开
 	if !group.pushEnable {
 		return
@@ -115,8 +116,10 @@ func (group *Group) startPushIfNeeded() {
 		urlParam = group.rtmpPubSession.RawQuery()
 	}
 	group.url2PushProxy.Range(func(key, value any) bool {
+
 		url := key.(string)
 		v := value.(*pushProxy)
+		Log.Debugf("开始判断是否需要推送: %v", *v)
 		// 正在转推中
 		if v.isPushing {
 			return true

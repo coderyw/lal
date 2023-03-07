@@ -96,7 +96,7 @@ Doc: %s
 	sm.config = LoadConfAndInitLog(rawContent)
 	base.LogoutStartInfo()
 
-	if sm.config.HlsConfig.Enable {
+	if sm.config.HlsConfig.EnableCache {
 		Log.Infof("hls use memory as disk.")
 		hls.SetUseMemoryAsDiskFlag(sm.config.HlsConfig.CacheFlag, sm.option.NewHlsCache)
 	}
@@ -209,7 +209,9 @@ func (sm *ServerManager) RunLoop() error {
 	if err := addMux(sm.config.HttptsConfig.CommonHttpServerConfig, sm.httpServerHandler.ServeSubSession, "httpts"); err != nil {
 		return err
 	}
-	if err := addMux(sm.config.HlsConfig.CommonHttpServerConfig, sm.serveHls, "hls"); err != nil {
+	a := sm.config.HlsConfig.CommonHttpServerConfig
+	a.Enable = a.Enable || sm.config.HlsConfig.EnableCache
+	if err := addMux(a, sm.serveHls, "hls"); err != nil {
 		return err
 	}
 
@@ -294,7 +296,6 @@ func (sm *ServerManager) RunLoop() error {
 			tickCount++
 
 			sm.mutex.Lock()
-
 			// 关闭空闲的group
 			sm.groupManager.Iterate(func(group *Group) bool {
 				if group.IsInactive() {
@@ -302,7 +303,6 @@ func (sm *ServerManager) RunLoop() error {
 					group.Dispose()
 					return false
 				}
-
 				group.Tick(tickCount)
 				return true
 			})
