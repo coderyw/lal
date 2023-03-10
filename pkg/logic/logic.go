@@ -42,7 +42,20 @@ type ILalServer interface {
 	//
 	StatLalInfo() base.LalInfo
 	StatAllGroup() (sgs []base.StatGroup)
-	AddGroupRelayPush(addr string, streamName string)
+	// CtrlStartRelayPushAll 转推全部流
+	//
+	// 根据自定义check规则，判断是否需要推送;
+	// 根据自定义check规则，判断是否需要推送.
+	// 如果key已经存在，则不处理
+	CtrlStartRelayPushAll(key, addr string, check func(streamName string) bool)
+	// CtrlStartRelayPush 转推流
+	//
+	// 如果streamName不是空，则转推streamName的流，否则转推全部
+	CtrlStartRelayPush(key, addr string, streamName string)
+	// CtrlStopRelayPushByAddr 停止转推流
+	//
+	// @param addr停止转推流地址
+	CtrlStopRelayPushByAddr(key string)
 	StatGroup(streamName string) *base.StatGroup
 	CtrlStartRelayPull(info base.ApiCtrlStartRelayPullReq) base.ApiCtrlStartRelayPullResp
 	CtrlStopRelayPull(streamName string) base.ApiCtrlStopRelayPullResp
@@ -121,6 +134,11 @@ type Option struct {
 
 	// 自定义hls缓存接口
 	NewHlsCache filesystemlayer.HlsFileSystemNewer
+
+	BeforeRelayPush func(info *base.RepayPushInfo)
+
+	// 播流链接请求进来后续操作之前执行
+	BeforeStreamHttpReq func(url string) string
 }
 
 var defaultOption = Option{

@@ -70,6 +70,7 @@ type IGroupObserver interface {
 	OnHlsMakeTs(info base.HlsMakeTsInfo)
 	OnRelayPullStart(info base.PullStartInfo) // TODO(chef): refactor me
 	OnRelayPullStop(info base.PullStopInfo)
+	BeforeRelayPush(info *base.RepayPushInfo)
 }
 
 type Group struct {

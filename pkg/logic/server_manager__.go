@@ -121,7 +121,7 @@ Doc: %s
 		sm.config.HttptsConfig.Enable || sm.config.HttptsConfig.EnableHttps ||
 		sm.config.HlsConfig.Enable || sm.config.HlsConfig.EnableHttps {
 		sm.httpServerManager = base.NewHttpServerManager()
-		sm.httpServerHandler = NewHttpServerHandler(sm)
+		sm.httpServerHandler = NewHttpServerHandler(sm, sm.option)
 		sm.hlsServerHandler = hls.NewServerHandler(sm.config.HlsConfig.OutPath, sm.config.HlsConfig.UrlPattern, sm.config.HlsConfig.SubSessionHashKey,
 			sm.config.HlsConfig.SubSessionTimeoutMs, sm.config.DefaultHttpConfig.HttpGZip, sm)
 	}
@@ -371,7 +371,7 @@ func (sm *ServerManager) Dispose() {
 	sm.mutex.Lock()
 	sm.groupManager.Iterate(func(group *Group) bool {
 		group.Dispose()
-		return true
+		return false
 	})
 	sm.mutex.Unlock()
 
@@ -757,6 +757,12 @@ func (sm *ServerManager) OnHlsMakeTs(info base.HlsMakeTsInfo) {
 	sm.option.NotifyHandler.OnHlsMakeTs(info)
 }
 
+func (sm *ServerManager) BeforeRelayPush(info *base.RepayPushInfo) {
+	if sm.option.BeforeRelayPush != nil {
+		sm.option.BeforeRelayPush(info)
+	}
+}
+
 // ---------------------------------------------------------------------------------------------------------------------
 
 func (sm *ServerManager) Config() *Config {
@@ -785,7 +791,12 @@ func (sm *ServerManager) getGroup(appName string, streamName string) *Group {
 }
 
 func (sm *ServerManager) serveHls(writer http.ResponseWriter, req *http.Request) {
-	urlCtx, err := base.ParseUrl(base.ParseHttpRequest(req), 80)
+	// 重新parse url
+	u := base.ParseHttpRequest(req)
+	if sm.option.BeforeStreamHttpReq != nil {
+		u = sm.option.BeforeStreamHttpReq(u)
+	}
+	urlCtx, err := base.ParseUrl(u, 80)
 	if err != nil {
 		Log.Errorf("parse url. err=%+v", err)
 		return
@@ -799,7 +810,7 @@ func (sm *ServerManager) serveHls(writer http.ResponseWriter, req *http.Request)
 		}
 	}
 
-	sm.hlsServerHandler.ServeHTTP(writer, req)
+	sm.hlsServerHandler.ServeHTTP(writer, req, urlCtx)
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

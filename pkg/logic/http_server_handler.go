@@ -32,17 +32,24 @@ type IHttpServerHandlerObserver interface {
 }
 
 type HttpServerHandler struct {
-	observer IHttpServerHandlerObserver
+	observer            IHttpServerHandlerObserver
+	beforeStreamHttpReq func(url string) string
 }
 
-func NewHttpServerHandler(observer IHttpServerHandlerObserver) *HttpServerHandler {
+func NewHttpServerHandler(observer IHttpServerHandlerObserver, option Option) *HttpServerHandler {
 	return &HttpServerHandler{
-		observer: observer,
+		observer:            observer,
+		beforeStreamHttpReq: option.BeforeStreamHttpReq,
 	}
 }
 
 func (h *HttpServerHandler) ServeSubSession(writer http.ResponseWriter, req *http.Request) {
-	urlCtx, err := base.ParseUrl(base.ParseHttpRequest(req), 80)
+	u := base.ParseHttpRequest(req)
+	if h.beforeStreamHttpReq != nil {
+		u = h.beforeStreamHttpReq(u)
+	}
+	// 重新设置 url
+	urlCtx, err := base.ParseUrl(u, 80)
 	if err != nil {
 		Log.Errorf("parse url. err=%+v", err)
 		return
@@ -70,12 +77,12 @@ func (h *HttpServerHandler) ServeSubSession(writer http.ResponseWriter, req *htt
 		session := httpflv.NewSubSession(conn, urlCtx, isWebSocket, webSocketKey)
 		Log.Debugf("[%s] < read http request. url=%s", session.UniqueKey(), session.Url())
 		if err = h.observer.OnNewHttpflvSubSession(session); err != nil {
-			Log.Infof("[%s] dispose by observer. err=%+v", session.UniqueKey(), err)
+			Log.Errorf("[%s] dispose by observer. err=%+v", session.UniqueKey(), err)
 			_ = session.Dispose()
 			return
 		}
 		err = session.RunLoop()
-		Log.Debugf("[%s] httpflv sub session loop done. err=%v", session.UniqueKey(), err)
+		Log.Errorf("[%s] httpflv sub session loop done. err=%v", session.UniqueKey(), err)
 		h.observer.OnDelHttpflvSubSession(session)
 		return
 	}

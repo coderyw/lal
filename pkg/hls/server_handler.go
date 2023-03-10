@@ -55,12 +55,12 @@ func NewServerHandler(outPath, urlPattern, subSessionHashKey string, subSessionT
 	return sh
 }
 
-func (s *ServerHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
-	urlCtx, err := base.ParseUrl(base.ParseHttpRequest(req), 80)
-	if err != nil {
-		Log.Errorf("parse url. err=%+v", err)
-		return
-	}
+func (s *ServerHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request, urlCtx base.UrlContext) {
+	//urlCtx, err := base.ParseUrl(base.ParseHttpRequest(req), 80)
+	//if err != nil {
+	//	Log.Errorf("parse url. err=%+v", err)
+	//	return
+	//}
 
 	s.ServeHTTPWithUrlCtx(resp, req, urlCtx)
 }

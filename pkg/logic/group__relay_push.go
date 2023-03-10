@@ -9,7 +9,7 @@
 package logic
 
 import (
-	"fmt"
+	"github.com/q191201771/lal/pkg/base"
 	"sync"
 
 	"github.com/q191201771/lal/pkg/rtmp"
@@ -17,38 +17,52 @@ import (
 
 // TODO(chef): [refactor] 参照relay pull，整体重构一次relay push 202205
 
-func (group *Group) AddRtmpPushSession(url string, session *rtmp.PushSession) {
-	Log.Debugf("[%s] [%s] add rtmp PushSession into group.", group.UniqueKey, session.UniqueKey())
+func (group *Group) AddRtmpPush(key, url string) {
+	Log.Debugf("[%s] [%s] [%s] add rtmp PushSession into group.", group.UniqueKey, key, url)
 	group.mutex.Lock()
 	defer group.mutex.Unlock()
 	if group.url2PushProxy != nil {
-		val, ok := group.url2PushProxy.Load(url)
-		if ok {
-			v := val.(*pushProxy)
-			v.pushSession = session
-			group.url2PushProxy.Store(url, v)
+		_, ok := group.url2PushProxy.Load(key)
+		if !ok {
+			Log.Debugf("推流不存在[%s]", key)
+			v := new(pushProxy)
+			v.pushUrl = url
+			group.url2PushProxy.Store(key, v)
 		}
 		//group.url2PushProxy[url].pushSession = session
 	}
 }
 
-func (group *Group) DelRtmpPushSession(url string, session *rtmp.PushSession) {
-	Log.Debugf("[%s] [%s] del rtmp PushSession into group.", group.UniqueKey, session.UniqueKey())
+func (group *Group) DelRtmpPush(key string) {
+	Log.Debugf("[%s]  del rtmp PushSession into group.", group.UniqueKey)
 	group.mutex.Lock()
 	defer group.mutex.Unlock()
 	if group.url2PushProxy != nil {
-		group.url2PushProxy.Delete(url)
+		group.url2PushProxy.Delete(key)
 		return
-		val, ok := group.url2PushProxy.Load(url)
-		if ok {
-			v := val.(*pushProxy)
-			v.pushSession = nil
-			v.isPushing = false
-			group.url2PushProxy.Store(url, v)
-		}
 		//
 		//group.url2PushProxy[url].pushSession = nil
 		//group.url2PushProxy[url].isPushing = false
+	}
+}
+
+// StopRtmpPush
+//
+// 停止推流
+func (group *Group) StopRtmpPush(key string) {
+	Log.Debugf("[%s]  stop rtmp PushSession into group.", group.UniqueKey)
+	group.mutex.Lock()
+	defer group.mutex.Unlock()
+	if group.url2PushProxy != nil {
+		val, ok := group.url2PushProxy.Load(key)
+		if ok {
+			v := val.(*pushProxy)
+			if v.pushSession != nil {
+				v.pushSession.Dispose()
+			}
+		}
+		group.url2PushProxy.Delete(key)
+		return
 	}
 }
 
@@ -57,21 +71,21 @@ func (group *Group) DelRtmpPushSession(url string, session *rtmp.PushSession) {
 type pushProxy struct {
 	isPushing   bool
 	pushSession *rtmp.PushSession
+	pushUrl     string
 }
 
 func (group *Group) initRelayPushByConfig() {
 	enable := group.config.RelayPushConfig.Enable
 	addrList := group.config.RelayPushConfig.AddrList
-	appName := group.appName
-	streamName := group.streamName
 
 	//url2PushProxy := make(map[string]*pushProxy)
 	url2PushProxy := new(sync.Map)
 	if enable {
 		for _, addr := range addrList {
-			pushUrl := fmt.Sprintf("rtmp://%s/%s/%s", addr, appName, streamName)
-			url2PushProxy.Store(pushUrl, &pushProxy{
+			//pushUrl := fmt.Sprintf("rtmp://%s/%s/%s", addr, appName, streamName)
+			url2PushProxy.Store(addr, &pushProxy{
 				isPushing:   false,
+				pushUrl:     addr,
 				pushSession: nil,
 			})
 			//url2PushProxy[pushUrl] = &pushProxy{
@@ -85,20 +99,8 @@ func (group *Group) initRelayPushByConfig() {
 	group.url2PushProxy = url2PushProxy
 }
 
-// addUrl2PushProxy 添加转推地址
-func (group *Group) addUrl2PushProxy(addr string) {
-	pushUrl := fmt.Sprintf("rtmp://%s/%s/%s", addr, group.appName, group.streamName)
-	if _, ok := group.url2PushProxy.Load(pushUrl); !ok {
-		group.url2PushProxy.Store(pushUrl, &pushProxy{
-			isPushing:   false,
-			pushSession: nil,
-		})
-	}
-}
-
 // startPushIfNeeded 必要时进行replay push转推
 func (group *Group) startPushIfNeeded() {
-	Log.Infof("开始推送如果可以")
 	// push转推功能没开
 	if !group.pushEnable {
 		return
@@ -111,43 +113,46 @@ func (group *Group) startPushIfNeeded() {
 
 	// relay push时携带rtmp pub的参数
 	// TODO chef: 这个逻辑放这里不太好看
-	var urlParam string
-	if group.rtmpPubSession != nil {
-		urlParam = group.rtmpPubSession.RawQuery()
+	info := &base.RepayPushInfo{
+		StreamName: group.streamName,
+		AppName:    group.appName,
 	}
+
 	group.url2PushProxy.Range(func(key, value any) bool {
 
-		url := key.(string)
 		v := value.(*pushProxy)
-		Log.Debugf("开始判断是否需要推送: %v", *v)
 		// 正在转推中
 		if v.isPushing {
 			return true
 		}
+		url := v.pushUrl
+		info.Key = key.(string)
+		info.PushUrl = url
+		// 执行before，设置推送地址
+		group.observer.BeforeRelayPush(info)
+
+		url = info.PushUrl
+		Log.Debugf("增加转推: %v", *v)
 		v.isPushing = true
 
-		urlWithParam := url
-		if urlParam != "" {
-			urlWithParam += "?" + urlParam
-		}
-		Log.Infof("[%s] start relay push. url=%s", group.UniqueKey, urlWithParam)
+		Log.Infof("[%s] start relay push. url=%s", group.UniqueKey, url)
 
-		go func(u, u2 string) {
-			pushSession := rtmp.NewPushSession(func(option *rtmp.PushSessionOption) {
-				option.PushTimeoutMs = relayPushTimeoutMs
-				option.WriteAvTimeoutMs = relayPushWriteAvTimeoutMs
-			})
-			err := pushSession.Push(u2)
-			if err != nil {
-				Log.Errorf("[%s] relay push done. err=%v", pushSession.UniqueKey(), err)
-				group.DelRtmpPushSession(u, pushSession)
-				return
-			}
-			group.AddRtmpPushSession(u, pushSession)
-			err = <-pushSession.WaitChan()
-			Log.Infof("[%s] relay push done. err=%v", pushSession.UniqueKey(), err)
-			group.DelRtmpPushSession(u, pushSession)
-		}(url, urlWithParam)
+		pushSession := rtmp.NewPushSession(func(option *rtmp.PushSessionOption) {
+			option.PushTimeoutMs = relayPushTimeoutMs
+			option.WriteAvTimeoutMs = relayPushWriteAvTimeoutMs
+		})
+		err := pushSession.Push(url)
+		if err != nil {
+			Log.Errorf("[%s] relay push done. err=%v", pushSession.UniqueKey(), err)
+			group.DelRtmpPush(key.(string))
+			return true
+		}
+		v.pushSession = pushSession
+		go func(u string, v *pushProxy) {
+			err = <-v.pushSession.WaitChan()
+			Log.Errorf("[%s] relay push done. err=%v", pushSession.UniqueKey(), err)
+			group.DelRtmpPush(u)
+		}(key.(string), v)
 		return true
 	})
 	//for url, v := range group.url2PushProxy {
@@ -171,13 +176,13 @@ func (group *Group) startPushIfNeeded() {
 	//		err := pushSession.Push(u2)
 	//		if err != nil {
 	//			Log.Errorf("[%s] relay push done. err=%v", pushSession.UniqueKey(), err)
-	//			group.DelRtmpPushSession(u, pushSession)
+	//			group.DelRtmpPush(u, pushSession)
 	//			return
 	//		}
-	//		group.AddRtmpPushSession(u, pushSession)
+	//		group.AddRtmpPush(u, pushSession)
 	//		err = <-pushSession.WaitChan()
 	//		Log.Infof("[%s] relay push done. err=%v", pushSession.UniqueKey(), err)
-	//		group.DelRtmpPushSession(u, pushSession)
+	//		group.DelRtmpPush(u, pushSession)
 	//	}(url, urlWithParam)
 	//}
 }

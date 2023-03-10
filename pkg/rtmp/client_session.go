@@ -241,12 +241,14 @@ func (s *ClientSession) connect() {
 
 	Log.Infof("[%s] > W SetChunkSize %d.", s.UniqueKey(), LocalChunkSize)
 	if err := s.packer.writeChunkSize(s.conn, LocalChunkSize); err != nil {
+		Log.Errorf("[%s] > write错误('%s'). tcUrl=%s err=%s", s.UniqueKey(), s.appName(), s.tcUrl(), err.Error())
 		s.errChan <- err
 		return
 	}
 
 	Log.Infof("[%s] > W connect('%s'). tcUrl=%s", s.UniqueKey(), s.appName(), s.tcUrl())
 	if err := s.packer.writeConnect(s.conn, s.appName(), s.tcUrl(), s.sessionStat.BaseType() == base.SessionBaseTypePushStr); err != nil {
+		Log.Errorf("[%s] > write错误('%s'). tcUrl=%s err=%s", s.UniqueKey(), s.appName(), s.tcUrl(), err.Error())
 		s.errChan <- err
 		return
 	}

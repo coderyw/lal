@@ -67,6 +67,13 @@ type PullStopInfo struct {
 	SessionEventCommonInfo
 }
 
+type RepayPushInfo struct {
+	Key        string
+	StreamName string
+	PushUrl    string
+	AppName    string
+}
+
 type RtmpConnectInfo struct {
 	EventCommonInfo
 

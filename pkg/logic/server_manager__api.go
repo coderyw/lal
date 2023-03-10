@@ -41,18 +41,6 @@ func (sm *ServerManager) StatAllGroup() (sgs []base.StatGroup) {
 	return
 }
 
-// AddGroupRelayPush 给group添加推流
-func (sm *ServerManager) AddGroupRelayPush(addr string, streamName string) {
-	sm.mutex.Lock()
-	defer sm.mutex.Unlock()
-	sm.groupManager.Iterate(func(group *Group) bool {
-		if streamName == "" || group.streamName == streamName {
-			group.addUrl2PushProxy(addr)
-		}
-		return true
-	})
-}
-
 func (sm *ServerManager) StatGroup(streamName string) *base.StatGroup {
 	sm.mutex.Lock()
 	defer sm.mutex.Unlock()
@@ -121,6 +109,46 @@ func (sm *ServerManager) CtrlStopRelayPull(streamName string) (ret base.ApiCtrlS
 	ret.ErrorCode = base.ErrorCodeSucc
 	ret.Desp = base.DespSucc
 	return
+}
+
+// CtrlStartRelayPushAll 转推全部流
+//
+// 根据自定义check规则，判断是否需要推送.
+func (sm *ServerManager) CtrlStartRelayPushAll(key, addr string, check func(streamName string) bool) {
+	sm.mutex.Lock()
+	defer sm.mutex.Unlock()
+	sm.groupManager.Iterate(func(group *Group) bool {
+		if (check != nil && check(group.streamName)) || check == nil {
+			group.AddRtmpPush(key, addr)
+		}
+		return true
+	})
+}
+
+// CtrlStartRelayPush 转推流
+//
+// 如果streamName不是空，则转推streamName的流，否则转推全部
+func (sm *ServerManager) CtrlStartRelayPush(key, addr string, streamName string) {
+	sm.mutex.Lock()
+	defer sm.mutex.Unlock()
+	sm.groupManager.Iterate(func(group *Group) bool {
+		if streamName == "" || group.streamName == streamName {
+			group.AddRtmpPush(key, addr)
+		}
+		return true
+	})
+}
+
+// CtrlStopRelayPushByAddr 停止转推流
+//
+// @param addr停止转推流地址
+func (sm *ServerManager) CtrlStopRelayPushByAddr(key string) {
+	sm.mutex.Lock()
+	defer sm.mutex.Unlock()
+	sm.groupManager.Iterate(func(group *Group) bool {
+		group.StopRtmpPush(key)
+		return true
+	})
 }
 
 // CtrlKickSession
