@@ -794,7 +794,12 @@ func (sm *ServerManager) serveHls(writer http.ResponseWriter, req *http.Request)
 	// 重新parse url
 	u := base.ParseHttpRequest(req)
 	if sm.option.BeforeStreamHttpReq != nil {
-		u = sm.option.BeforeStreamHttpReq(u)
+		var err error
+		u, err = sm.option.BeforeStreamHttpReq(u, req.Header)
+		if err != nil {
+			Log.Errorf("beforeStreamHttpReq. err=%+v", err)
+			return
+		}
 	}
 	urlCtx, err := base.ParseUrl(u, 80)
 	if err != nil {

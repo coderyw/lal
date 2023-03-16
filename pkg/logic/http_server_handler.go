@@ -33,7 +33,7 @@ type IHttpServerHandlerObserver interface {
 
 type HttpServerHandler struct {
 	observer            IHttpServerHandlerObserver
-	beforeStreamHttpReq func(url string) string
+	beforeStreamHttpReq func(url string, heander map[string][]string) (string, error)
 }
 
 func NewHttpServerHandler(observer IHttpServerHandlerObserver, option Option) *HttpServerHandler {
@@ -46,7 +46,12 @@ func NewHttpServerHandler(observer IHttpServerHandlerObserver, option Option) *H
 func (h *HttpServerHandler) ServeSubSession(writer http.ResponseWriter, req *http.Request) {
 	u := base.ParseHttpRequest(req)
 	if h.beforeStreamHttpReq != nil {
-		u = h.beforeStreamHttpReq(u)
+		var err error
+		u, err = h.beforeStreamHttpReq(u, req.Header)
+		if err != nil {
+			Log.Errorf("beforeStreamHttpReq. err=%+v", err)
+			return
+		}
 	}
 	// 重新设置 url
 	urlCtx, err := base.ParseUrl(u, 80)

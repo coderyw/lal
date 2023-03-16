@@ -138,7 +138,7 @@ type Option struct {
 	BeforeRelayPush func(info *base.RepayPushInfo)
 
 	// 播流链接请求进来后续操作之前执行
-	BeforeStreamHttpReq func(url string) string
+	BeforeStreamHttpReq func(url string, header map[string][]string) (string, error)
 }
 
 var defaultOption = Option{
