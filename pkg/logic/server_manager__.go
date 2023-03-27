@@ -122,8 +122,13 @@ Doc: %s
 		sm.config.HlsConfig.Enable || sm.config.HlsConfig.EnableHttps {
 		sm.httpServerManager = base.NewHttpServerManager()
 		sm.httpServerHandler = NewHttpServerHandler(sm, sm.option)
-		sm.hlsServerHandler = hls.NewServerHandler(sm.config.HlsConfig.OutPath, sm.config.HlsConfig.UrlPattern, sm.config.HlsConfig.SubSessionHashKey,
-			sm.config.HlsConfig.SubSessionTimeoutMs, sm.config.DefaultHttpConfig.HttpGZip, sm)
+		sm.hlsServerHandler = hls.NewServerHandler(sm.config.HlsConfig.OutPath,
+			sm.config.HlsConfig.UrlPattern,
+			sm.config.HlsConfig.SubSessionHashKey,
+			sm.config.HlsConfig.SubSessionTimeoutMs,
+			sm.config.DefaultHttpConfig.HttpGZip,
+			sm,
+			sm.option.BeforeWriteM3u8)
 	}
 
 	if sm.config.RtmpConfig.Enable {
@@ -761,6 +766,27 @@ func (sm *ServerManager) BeforeRelayPush(info *base.RepayPushInfo) {
 	if sm.option.BeforeRelayPush != nil {
 		sm.option.BeforeRelayPush(info)
 	}
+}
+
+// KickFlvByCond
+//
+// 通过传入的条件来判断是否需要移除这条流
+func (sm *ServerManager) KickFlvByCond(KickFlvFunc func(streamName string, flvHeader map[string][]string) bool) {
+	if KickFlvFunc == nil {
+		return
+	}
+	sm.mutex.Lock()
+	defer sm.mutex.Unlock()
+	sm.groupManager.Iterate(func(group *Group) bool {
+		group.mutex.Lock()
+		defer group.mutex.Unlock()
+		for k := range group.httpflvSubSessionSet {
+			if KickFlvFunc(k.StreamName(), k.Header()) {
+				k.Dispose()
+			}
+		}
+		return true
+	})
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

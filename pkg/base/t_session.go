@@ -180,6 +180,7 @@ type ISessionUrlContext interface {
 	AppName() string
 	StreamName() string
 	RawQuery() string // 参数，也即 url param
+	Header() map[string][]string
 }
 
 type IObject interface {

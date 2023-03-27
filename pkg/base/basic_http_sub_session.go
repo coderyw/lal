@@ -55,6 +55,10 @@ func (session *BasicHttpSubSession) Dispose() error {
 	return session.conn.Close()
 }
 
+func (session *BasicHttpSubSession) Header() map[string][]string {
+	return nil
+}
+
 // ---------------------------------------------------------------------------------------------------------------------
 
 func (session *BasicHttpSubSession) WriteHttpResponseHeader(b []byte) {

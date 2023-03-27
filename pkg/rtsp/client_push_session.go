@@ -134,6 +134,9 @@ func (session *PushSession) WaitChan() <-chan error {
 func (session *PushSession) Url() string {
 	return session.cmdSession.Url()
 }
+func (session *PushSession) Header() map[string][]string {
+	return nil
+}
 
 // AppName 文档请参考： interface ISessionUrlContext
 func (session *PushSession) AppName() string {

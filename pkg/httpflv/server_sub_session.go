@@ -22,9 +22,10 @@ type SubSession struct {
 	core                    *base.BasicHttpSubSession
 	IsFresh                 bool
 	ShouldWaitVideoKeyFrame bool
+	header                  map[string][]string
 }
 
-func NewSubSession(conn net.Conn, urlCtx base.UrlContext, isWebSocket bool, websocketKey string) *SubSession {
+func NewSubSession(conn net.Conn, urlCtx base.UrlContext, isWebSocket bool, websocketKey string, header map[string][]string) *SubSession {
 	uk := base.GenUkFlvSubSession()
 	s := &SubSession{
 		core: base.NewBasicHttpSubSession(base.BasicHttpSubSessionOption{
@@ -40,6 +41,7 @@ func NewSubSession(conn net.Conn, urlCtx base.UrlContext, isWebSocket bool, webs
 		}),
 		IsFresh:                 true,
 		ShouldWaitVideoKeyFrame: true,
+		header:                  header,
 	}
 	Log.Infof("[%s] lifecycle new httpflv SubSession. session=%p, remote addr=%s", uk, s, conn.RemoteAddr().String())
 	return s
@@ -104,6 +106,10 @@ func (session *SubSession) StreamName() string {
 
 func (session *SubSession) RawQuery() string {
 	return session.core.RawQuery()
+}
+
+func (session *SubSession) Header() map[string][]string {
+	return session.header
 }
 
 // ----- ISessionStat --------------------------------------------------------------------------------------------------

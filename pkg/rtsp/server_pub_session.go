@@ -74,6 +74,10 @@ func (session *PubSession) Url() string {
 	return session.urlCtx.Url
 }
 
+func (session *PubSession) Header() map[string][]string {
+	return nil
+}
+
 func (session *PubSession) AppName() string {
 	return session.urlCtx.PathWithoutLastItem
 }

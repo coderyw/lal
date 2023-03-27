@@ -104,6 +104,9 @@ func (s *PushSession) WaitChan() <-chan error {
 func (s *PushSession) Url() string {
 	return s.core.Url()
 }
+func (s *PushSession) Header() map[string][]string {
+	return nil
+}
 
 // AppName 文档请参考： interface ISessionUrlContext
 func (s *PushSession) AppName() string {

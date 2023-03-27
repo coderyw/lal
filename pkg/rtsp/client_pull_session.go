@@ -151,6 +151,9 @@ func (session *PullSession) WaitChan() <-chan error {
 func (session *PullSession) Url() string {
 	return session.cmdSession.Url()
 }
+func (session *PullSession) Header() map[string][]string {
+	return nil
+}
 
 // AppName 文档请参考： interface ISessionUrlContext
 func (session *PullSession) AppName() string {

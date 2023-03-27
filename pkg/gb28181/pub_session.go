@@ -94,6 +94,10 @@ func (session *PubSession) Dispose() error {
 	return session.dispose(nil)
 }
 
+func (session *PubSession) Header() map[string][]string {
+	return nil
+}
+
 // ----- ISessionUrlContext --------------------------------------------------------------------------------------------
 
 func (session *PubSession) Url() string {

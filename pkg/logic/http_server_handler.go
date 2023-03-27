@@ -45,6 +45,10 @@ func NewHttpServerHandler(observer IHttpServerHandlerObserver, option Option) *H
 
 func (h *HttpServerHandler) ServeSubSession(writer http.ResponseWriter, req *http.Request) {
 	u := base.ParseHttpRequest(req)
+	if !strings.HasSuffix(u, ".flv") {
+		u += ".flv"
+	}
+	Log.Debugf("flv 解析后的url=%v", u)
 	if h.beforeStreamHttpReq != nil {
 		var err error
 		u, err = h.beforeStreamHttpReq(u, req.Header)
@@ -79,7 +83,7 @@ func (h *HttpServerHandler) ServeSubSession(writer http.ResponseWriter, req *htt
 	}
 
 	if strings.HasSuffix(urlCtx.LastItemOfPath, ".flv") {
-		session := httpflv.NewSubSession(conn, urlCtx, isWebSocket, webSocketKey)
+		session := httpflv.NewSubSession(conn, urlCtx, isWebSocket, webSocketKey, req.Header)
 		Log.Debugf("[%s] < read http request. url=%s", session.UniqueKey(), session.Url())
 		if err = h.observer.OnNewHttpflvSubSession(session); err != nil {
 			Log.Errorf("[%s] dispose by observer. err=%+v", session.UniqueKey(), err)

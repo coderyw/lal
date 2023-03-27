@@ -190,6 +190,10 @@ func (s *ClientSession) WaitChan() <-chan error {
 	return s.conn.Done()
 }
 
+func (s *ClientSession) Header() map[string][]string {
+	return nil
+}
+
 // ---------------------------------------------------------------------------------------------------------------------
 
 func (s *ClientSession) Url() string {

@@ -59,6 +59,9 @@ func NewSubSession(req *http.Request, urlCtx base.UrlContext, hlsUrlPattern, ses
 func (s *SubSession) Url() string {
 	return s.urlCtx.Url
 }
+func (s *SubSession) Header() map[string][]string {
+	return nil
+}
 
 func (s *SubSession) AppName() string {
 	if s.appName == "" {

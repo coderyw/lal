@@ -101,6 +101,10 @@ func (session *PullSession) Dispose() error {
 	return session.dispose(nil)
 }
 
+func (session *PullSession) Header() map[string][]string {
+	return nil
+}
+
 // WaitChan 文档请参考： IClientSessionLifecycle interface
 func (session *PullSession) WaitChan() <-chan error {
 	return session.conn.Done()

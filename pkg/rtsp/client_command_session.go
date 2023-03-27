@@ -130,6 +130,9 @@ func (session *ClientCommandSession) Do(rawUrl string) error {
 func (session *ClientCommandSession) Dispose() error {
 	return session.dispose(nil)
 }
+func (session *ClientCommandSession) Header() map[string][]string {
+	return nil
+}
 
 // WaitChan 文档请参考： IClientSessionLifecycle interface
 func (session *ClientCommandSession) WaitChan() <-chan error {

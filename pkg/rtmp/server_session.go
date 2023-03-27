@@ -146,6 +146,9 @@ func (s *ServerSession) Dispose() error {
 func (s *ServerSession) Url() string {
 	return s.url
 }
+func (s *ServerSession) Header() map[string][]string {
+	return nil
+}
 
 func (s *ServerSession) AppName() string {
 	return s.appName

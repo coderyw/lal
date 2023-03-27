@@ -74,6 +74,10 @@ func (session *SubSession) Url() string {
 	return session.urlCtx.Url
 }
 
+func (session *SubSession) Header() map[string][]string {
+	return nil
+}
+
 func (session *SubSession) AppName() string {
 	return session.urlCtx.PathWithoutLastItem
 }

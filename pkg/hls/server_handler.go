@@ -27,6 +27,8 @@ type IHlsServerHandlerObserver interface {
 	OnDelHlsSubSession(session *SubSession)
 }
 
+type BWM func(oriStreamName string, header map[string][]string, content []byte) ([]byte, error)
+
 type ServerHandler struct {
 	outPath           string
 	observer          IHlsServerHandlerObserver
@@ -36,9 +38,10 @@ type ServerHandler struct {
 	subSessionTimeout time.Duration
 	subSessionHashKey string
 	gzip              bool
+	BeforeWriteM3u8   BWM
 }
 
-func NewServerHandler(outPath, urlPattern, subSessionHashKey string, subSessionTimeoutMs int, gzip bool, observer IHlsServerHandlerObserver) *ServerHandler {
+func NewServerHandler(outPath, urlPattern, subSessionHashKey string, subSessionTimeoutMs int, gzip bool, observer IHlsServerHandlerObserver, be BWM) *ServerHandler {
 	if strings.HasPrefix(urlPattern, "/") {
 		urlPattern = urlPattern[1:]
 	}
@@ -50,11 +53,13 @@ func NewServerHandler(outPath, urlPattern, subSessionHashKey string, subSessionT
 		subSessionTimeout: time.Duration(subSessionTimeoutMs) * time.Millisecond,
 		subSessionHashKey: subSessionHashKey,
 		gzip:              gzip,
+		BeforeWriteM3u8:   be,
 	}
 	go sh.runLoop()
 	return sh
 }
 
+// withParam 是需要添加的参数。返回放在m3u8里的ts列表后
 func (s *ServerHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request, urlCtx base.UrlContext) {
 	//urlCtx, err := base.ParseUrl(base.ParseHttpRequest(req), 80)
 	//if err != nil {
@@ -110,7 +115,7 @@ func (s *ServerHandler) ServeHTTPWithUrlCtx(resp http.ResponseWriter, req *http.
 				query := urlObj.Query()
 				query.Set("session_id", session.sessionIdHash)
 				redirectUrl := urlObj.Path + "?" + query.Encode()
-				resp.Header().Add("Cache-Control", "no-cache")
+				resp.Header().Add("Cache-Control", "max-age=3")
 				resp.Header().Add("Access-Control-Allow-Origin", "*")
 				http.Redirect(resp, req, redirectUrl, http.StatusFound)
 				return
@@ -144,11 +149,21 @@ func (s *ServerHandler) ServeHTTPWithUrlCtx(resp http.ResponseWriter, req *http.
 		if sessionIdHash != "" {
 			content = bytes.ReplaceAll(content, []byte(".ts"), []byte(".ts?session_id="+sessionIdHash))
 		}
+		if s.BeforeWriteM3u8 != nil {
+			content, err = s.BeforeWriteM3u8(ri.StreamName, req.Header, content)
+			if err != nil {
+				Log.Warnf(err.Error())
+				resp.WriteHeader(http.StatusNotFound)
+				return
+
+			}
+		}
 	case "ts":
 		resp.Header().Add("Content-Type", "video/mp2t")
 		resp.Header().Add("Server", base.LalHlsTsServer)
+		resp.Header().Add("Cache-Control", "max-age=3600")
 	}
-	resp.Header().Add("Cache-Control", "no-cache")
+
 	resp.Header().Add("Access-Control-Allow-Origin", "*")
 
 	if sessionIdHash != "" {

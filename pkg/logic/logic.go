@@ -60,6 +60,7 @@ type ILalServer interface {
 	CtrlStartRelayPull(info base.ApiCtrlStartRelayPullReq) base.ApiCtrlStartRelayPullResp
 	CtrlStopRelayPull(streamName string) base.ApiCtrlStopRelayPullResp
 	CtrlKickSession(info base.ApiCtrlKickSessionReq) base.ApiCtrlKickSessionResp
+	KickFlvByCond(KickFlvFunc func(streamName string, flvHeader map[string][]string) bool)
 }
 
 // NewLalServer 创建一个lal server
@@ -138,7 +139,9 @@ type Option struct {
 	BeforeRelayPush func(info *base.RepayPushInfo)
 
 	// 播流链接请求进来后续操作之前执行
-	BeforeStreamHttpReq func(url string, header map[string][]string) (string, error)
+	BeforeStreamHttpReq func(url string, header map[string][]string) (parsedUrl string, err error)
+
+	BeforeWriteM3u8 func(oriStreamName string, header map[string][]string, content []byte) ([]byte, error)
 }
 
 var defaultOption = Option{

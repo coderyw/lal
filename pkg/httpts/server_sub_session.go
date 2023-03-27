@@ -82,6 +82,9 @@ func (session *SubSession) UniqueKey() string {
 func (session *SubSession) Url() string {
 	return session.core.Url()
 }
+func (session *SubSession) Header() map[string][]string {
+	return nil
+}
 
 func (session *SubSession) AppName() string {
 	return session.core.AppName()
