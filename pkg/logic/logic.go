@@ -142,6 +142,9 @@ type Option struct {
 	BeforeStreamHttpReq func(url string, header map[string][]string) (parsedUrl string, err error)
 
 	BeforeWriteM3u8 func(oriStreamName string, header map[string][]string, content []byte) ([]byte, error)
+
+	OnOnNewRtmpPubSession func(info base.PubStartInfo)
+	OnDelRtmpPubSession   func(info base.PubStopInfo)
 }
 
 var defaultOption = Option{

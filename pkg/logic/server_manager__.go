@@ -437,6 +437,9 @@ func (sm *ServerManager) OnNewRtmpPubSession(session *rtmp.ServerSession) error 
 	info.HasOutSession = group.HasOutSession()
 
 	sm.option.NotifyHandler.OnPubStart(info)
+	if sm.option.OnOnNewRtmpPubSession != nil {
+		sm.option.OnOnNewRtmpPubSession(info)
+	}
 	return nil
 }
 
@@ -455,6 +458,10 @@ func (sm *ServerManager) OnDelRtmpPubSession(session *rtmp.ServerSession) {
 	info.HasInSession = group.HasInSession()
 	info.HasOutSession = group.HasOutSession()
 	sm.option.NotifyHandler.OnPubStop(info)
+	if sm.option.OnDelRtmpPubSession != nil {
+		sm.option.OnDelRtmpPubSession(info)
+	}
+
 }
 
 func (sm *ServerManager) OnNewRtmpSubSession(session *rtmp.ServerSession) error {
