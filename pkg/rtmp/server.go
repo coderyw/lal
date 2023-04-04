@@ -95,10 +95,7 @@ func (server *Server) handleTcpConnect(conn net.Conn) {
 	Log.Infof("accept a rtmp connection. remoteAddr=%s", conn.RemoteAddr().String())
 	session := NewServerSession(server, conn)
 	_ = session.RunLoop()
-
-	if session.DisposeByObserverFlag {
-		return
-	}
+	Log.Debugf("rtmp断开, type=%v, streamName=%v", session.sessionStat.BaseType(), session.StreamName())
 	switch session.sessionStat.BaseType() {
 	case base.SessionBaseTypePubStr:
 		server.observer.OnDelRtmpPubSession(session)

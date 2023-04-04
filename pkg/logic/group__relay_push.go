@@ -140,6 +140,7 @@ func (group *Group) startPushIfNeeded() {
 		pushSession := rtmp.NewPushSession(func(option *rtmp.PushSessionOption) {
 			option.PushTimeoutMs = relayPushTimeoutMs
 			option.WriteAvTimeoutMs = relayPushWriteAvTimeoutMs
+			option.WriteChanSize = 512 //todo 增加size防止有携程泄露
 		})
 		err := pushSession.Push(url)
 		if err != nil {

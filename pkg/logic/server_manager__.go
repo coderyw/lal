@@ -444,23 +444,24 @@ func (sm *ServerManager) OnNewRtmpPubSession(session *rtmp.ServerSession) error 
 }
 
 func (sm *ServerManager) OnDelRtmpPubSession(session *rtmp.ServerSession) {
+
 	sm.mutex.Lock()
 	defer sm.mutex.Unlock()
-
+	info := base.Session2PubStopInfo(session)
+	if sm.option.OnDelRtmpPubSession != nil {
+		sm.option.OnDelRtmpPubSession(info)
+	}
+	if session.DisposeByObserverFlag {
+		return
+	}
 	group := sm.getGroup(session.AppName(), session.StreamName())
 	if group == nil {
 		return
 	}
-
 	group.DelRtmpPubSession(session)
-
-	info := base.Session2PubStopInfo(session)
 	info.HasInSession = group.HasInSession()
 	info.HasOutSession = group.HasOutSession()
 	sm.option.NotifyHandler.OnPubStop(info)
-	if sm.option.OnDelRtmpPubSession != nil {
-		sm.option.OnDelRtmpPubSession(info)
-	}
 
 }
 
@@ -485,6 +486,9 @@ func (sm *ServerManager) OnNewRtmpSubSession(session *rtmp.ServerSession) error 
 }
 
 func (sm *ServerManager) OnDelRtmpSubSession(session *rtmp.ServerSession) {
+	if session.DisposeByObserverFlag {
+		return
+	}
 	sm.mutex.Lock()
 	defer sm.mutex.Unlock()
 
