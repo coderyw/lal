@@ -449,6 +449,7 @@ func (sm *ServerManager) OnDelRtmpPubSession(session *rtmp.ServerSession) {
 	defer sm.mutex.Unlock()
 	info := base.Session2PubStopInfo(session)
 	if sm.option.OnDelRtmpPubSession != nil {
+		Log.Infof("端流后续操作 info=%v", info)
 		sm.option.OnDelRtmpPubSession(info)
 	}
 	if session.DisposeByObserverFlag {
@@ -835,6 +836,7 @@ func (sm *ServerManager) serveHls(writer http.ResponseWriter, req *http.Request)
 		u, err = sm.option.BeforeStreamHttpReq(u, req.Header)
 		if err != nil {
 			Log.Errorf("beforeStreamHttpReq. err=%+v", err)
+			writer.WriteHeader(http.StatusForbidden)
 			return
 		}
 	}

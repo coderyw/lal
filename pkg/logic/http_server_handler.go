@@ -54,6 +54,7 @@ func (h *HttpServerHandler) ServeSubSession(writer http.ResponseWriter, req *htt
 		u, err = h.beforeStreamHttpReq(u, req.Header)
 		if err != nil {
 			Log.Errorf("beforeStreamHttpReq. err=%+v", err)
+			writer.WriteHeader(http.StatusForbidden)
 			return
 		}
 	}
