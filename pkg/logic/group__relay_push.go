@@ -19,8 +19,8 @@ import (
 
 func (group *Group) AddRtmpPush(key, url string) {
 	Log.Debugf("[%s] [%s] [%s] add rtmp PushSession into group.", group.UniqueKey, key, url)
-	group.mutex.Lock()
-	defer group.mutex.Unlock()
+	//group.mutex.Lock()
+	//defer group.mutex.Unlock()
 	if group.url2PushProxy != nil {
 		_, ok := group.url2PushProxy.Load(key)
 		if !ok {
@@ -35,8 +35,8 @@ func (group *Group) AddRtmpPush(key, url string) {
 
 func (group *Group) DelRtmpPush(key string) {
 	Log.Debugf("[%s]  del rtmp PushSession into group.", group.UniqueKey)
-	group.mutex.Lock()
-	defer group.mutex.Unlock()
+	//group.mutex.Lock()
+	//defer group.mutex.Unlock()
 	if group.url2PushProxy != nil {
 		group.url2PushProxy.Delete(key)
 		return
@@ -51,8 +51,8 @@ func (group *Group) DelRtmpPush(key string) {
 // 停止推流
 func (group *Group) StopRtmpPush(key string) {
 	Log.Debugf("[%s]  stop rtmp PushSession into group.", group.UniqueKey)
-	group.mutex.Lock()
-	defer group.mutex.Unlock()
+	//group.mutex.Lock()
+	//defer group.mutex.Unlock()
 	if group.url2PushProxy != nil {
 		val, ok := group.url2PushProxy.Load(key)
 		if ok {
